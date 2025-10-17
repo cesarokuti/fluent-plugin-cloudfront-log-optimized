@@ -144,6 +144,8 @@ class Fluent::Cloudfront_LogInput < Fluent::Input
                 end
 
     router.emit(@tag, timestamp, record)
+
+    record # for testing purposes
   end
 
   def process_content(content)
