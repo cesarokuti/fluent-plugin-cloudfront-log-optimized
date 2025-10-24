@@ -138,10 +138,10 @@ class Fluent::Cloudfront_LogInput < Fluent::Input
     ].transpose.to_h
 
     timestamp = if @parse_date_time
-                  Time.iso8601("#{record['date']}T#{record['time']}+00:00").to_i
-                else
-                  Time.now.to_i
-                end
+      Time.iso8601("#{record['date']}T#{record['time']}+00:00").to_i
+    else
+      Time.now.to_i
+    end
 
     router.emit(@tag, timestamp, record)
 
