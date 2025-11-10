@@ -137,7 +137,7 @@ class Fluent::Cloudfront_LogInput < Fluent::Input
 
     record = [
       @fields,
-      CGI.unescape(line).strip.split("\t")
+      CGI.unescape(line).split("\t")
     ].transpose.to_h
 
     timestamp = if @parse_date_time
