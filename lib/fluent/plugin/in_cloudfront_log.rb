@@ -29,6 +29,7 @@ class Fluent::Cloudfront_LogInput < Fluent::Input
     require 'aws-sdk-s3'
     require 'time'
     require 'uri'
+    require 'cgi'
   end
 
   def configure(conf)
@@ -126,11 +127,20 @@ class Fluent::Cloudfront_LogInput < Fluent::Input
     end
   end
 
+  # Replace invalid UTF-8 sequences while preserving valid multi-byte Unicode.
+  # CloudFront access logs can contain raw high bytes that break CGI.unescape/split
+  # and later JSON serialization (e.g. Loki).
+  def scrub_utf8(value)
+    value.to_s.dup.force_encoding('UTF-8').scrub('')
+  end
+
   def process_line(line)
     if line[0.1] == '#'
       parse_header(line)
       return
     end
+
+    line = scrub_utf8(line)
 
     # replace %09 (tab) with space to avoid incorrect introduction of tab character by CGI.unescape
     line["%09"] = " " if line.include?("%09")
@@ -139,6 +149,10 @@ class Fluent::Cloudfront_LogInput < Fluent::Input
       @fields,
       CGI.unescape(line).split("\t")
     ].transpose.to_h
+
+    record.each do |key, value|
+      record[key] = scrub_utf8(value) if value.is_a?(String)
+    end
 
     timestamp = if @parse_date_time
       Time.iso8601("#{record['date']}T#{record['time']}+00:00").to_i

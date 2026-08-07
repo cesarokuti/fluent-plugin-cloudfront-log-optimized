@@ -1,3 +1,6 @@
+## Release 0.2.3
+- [fix] scrub invalid UTF-8 in CloudFront log lines before CGI.unescape/split so parse and JSON emit stay valid without dropping Unicode
+
 ## Release 0.2.2
 - [end] replace slow gsub with more efficient string replace
 
