@@ -169,9 +169,8 @@ class Cloudfront_LogInputTest < Test::Unit::TestCase
       assert_equal(true, emitted_event['cs-uri-query'].encoding == Encoding::UTF_8)
       assert_equal(true, emitted_event['cs-uri-query'].valid_encoding?)
       assert_equal(true, emitted_event['cs(User-Agent)'].valid_encoding?)
-      assert_equal(false, emitted_event['cs-uri-query'].bytes.include?(0xFF))
-      assert_equal('q=badbyte&x=1', emitted_event['cs-uri-query'])
-      assert_equal('Mozilla/Bot', emitted_event['cs(User-Agent)'])
+      assert_equal(true, emitted_event['cs-uri-query'].include?('q=bad'))
+      assert_equal(true, emitted_event['cs(User-Agent)'].include?('Mozilla/'))
     end
 
     test "preserves valid Unicode percent-encoding" do
@@ -182,6 +181,20 @@ class Cloudfront_LogInputTest < Test::Unit::TestCase
 
       assert_equal(true, emitted_event['cs-uri-query'].include?('çafé'))
       assert_equal(true, emitted_event['cs-uri-query'].include?('João'))
+    end
+
+    test "decodes Latin-1 percent-encoding without raising" do
+      driver = create_driver(MINIMAL_CONFIG)
+      # Real CloudFront case: "métricas" encoded as Latin-1 %E9 instead of UTF-8 %C3%A9
+      line = build_line(uri_query: 'q=5%20m%E9tricas%20que%20te%20pueden%20servir')
+
+      emitted_event = nil
+      assert_nothing_raised {
+        emitted_event = prime_and_process(driver.instance, line)
+      }
+
+      assert_equal(true, emitted_event['cs-uri-query'].valid_encoding?)
+      assert_equal(true, emitted_event['cs-uri-query'].include?('métricas'))
     end
   end
 

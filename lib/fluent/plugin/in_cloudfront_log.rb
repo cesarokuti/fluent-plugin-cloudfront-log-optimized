@@ -127,20 +127,26 @@ class Fluent::Cloudfront_LogInput < Fluent::Input
     end
   end
 
-  # Replace invalid UTF-8 sequences while preserving valid multi-byte Unicode.
-  # CloudFront access logs can contain raw high bytes that break CGI.unescape/split
-  # and later JSON serialization (e.g. Loki).
+  # Normalize field values to valid UTF-8 for Loki JSON.
+  # Prefer keeping already-valid UTF-8; otherwise treat bytes as ISO-8859-1
+  # (common for percent-encoded Latin-1 in query strings, e.g. %E9 → é).
   def scrub_utf8(value)
-    value.to_s.dup.force_encoding('UTF-8').scrub('')
+    s = value.to_s.dup
+    s.force_encoding('UTF-8')
+    return s if s.valid_encoding?
+
+    s.force_encoding('ISO-8859-1').encode('UTF-8')
   end
 
   def process_line(line)
+    # Parse as binary: CGI.unescape of %E9/%FF etc. yields high bytes that are
+    # invalid when the string is tagged UTF-8, and String#split then raises.
+    line = line.to_s.dup.force_encoding('ASCII-8BIT')
+
     if line[0.1] == '#'
-      parse_header(line)
+      parse_header(scrub_utf8(line))
       return
     end
-
-    line = scrub_utf8(line)
 
     # replace %09 (tab) with space to avoid incorrect introduction of tab character by CGI.unescape
     line["%09"] = " " if line.include?("%09")
