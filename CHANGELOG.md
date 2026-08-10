@@ -1,5 +1,5 @@
 ## Release 0.2.3
-- [fix] scrub invalid UTF-8 in CloudFront log lines before CGI.unescape/split so parse and JSON emit stay valid without dropping Unicode
+- [fix] parse CloudFront lines as binary and normalize fields to UTF-8 (ISO-8859-1 fallback) so Latin-1 percent-encoding like `%E9` and invalid UTF-8 no longer break `CGI.unescape`/`.split` or Loki JSON
 
 ## Release 0.2.2
 - [end] replace slow gsub with more efficient string replace
